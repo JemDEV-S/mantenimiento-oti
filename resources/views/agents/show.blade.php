@@ -130,17 +130,19 @@
 
                 @forelse ($agentDevice->syncs->take(50) as $sync)
                 @php
-                    $syncTone = match($sync->status) {
-                        'exitoso' => 'success', 'pendiente' => 'neutral', 'error' => 'danger', default => 'neutral',
+                    $syncStatus = $sync->status?->value ?? (string) $sync->status;
+                    $syncType = $sync->sync_type?->value ?? (string) $sync->sync_type;
+                    $syncTone = match($syncStatus) {
+                        'procesado' => 'success', 'recibido' => 'neutral', 'error' => 'danger', default => 'neutral',
                     };
                 @endphp
                 <tr class="hover:bg-slate-50/50 transition-colors">
                     <x-ui.td>
-                        <x-ui.badge tone="{{ $sync->sync_type === 'heartbeat' ? 'neutral' : ($sync->sync_type === 'snapshot' ? 'info' : 'primary') }}" size="sm">
-                            {{ $sync->sync_type }}
+                        <x-ui.badge tone="{{ $syncType === 'heartbeat' ? 'neutral' : ($syncType === 'snapshot' ? 'info' : 'primary') }}" size="sm">
+                            {{ $sync->sync_type->label() }}
                         </x-ui.badge>
                     </x-ui.td>
-                    <x-ui.td><x-ui.badge :tone="$syncTone" size="sm">{{ $sync->status }}</x-ui.badge></x-ui.td>
+                    <x-ui.td><x-ui.badge :tone="$syncTone" size="sm">{{ $sync->status->label() }}</x-ui.badge></x-ui.td>
                     <x-ui.td><span class="font-mono text-sm text-slate-600">{{ $sync->ip_address ?? '—' }}</span></x-ui.td>
                     <x-ui.td><span class="text-sm text-slate-600">{{ $sync->agent_version ?? '—' }}</span></x-ui.td>
                     <x-ui.td><span class="text-sm text-slate-500">{{ $sync->created_at->format('d/m/Y H:i') }}</span></x-ui.td>

@@ -42,6 +42,14 @@ class AgentDeviceException extends Exception
         );
     }
 
+    public static function assetCodeNotFound(string $assetCode): self
+    {
+        return new self(
+            "No existe un activo con codigo interno o patrimonial '{$assetCode}'.",
+            Response::HTTP_NOT_FOUND
+        );
+    }
+
     public function render(): \Illuminate\Http\JsonResponse
     {
         return response()->json([
