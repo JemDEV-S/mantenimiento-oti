@@ -10,6 +10,31 @@
             'bueno' => 'success', 'regular' => 'warning', 'malo' => 'danger', 'obsoleto' => 'neutral',
             default => 'neutral',
         };
+
+        $specs = $asset->specs_json ?? [];
+        $extra = $asset->extra_json ?? [];
+        $agentSnapshot = $asset->agentDevice?->last_snapshot_json ?? [];
+        $agentDeviceData = data_get($agentSnapshot, 'Device', data_get($agentSnapshot, 'device', []));
+        $agentHealth = data_get($extra, 'last_health', $asset->agentDevice?->last_health_json ?? []);
+        $agentTone = $asset->agentDevice ? match($asset->agentDevice->status->value) {
+            'activo' => 'success', 'inactivo' => 'neutral', 'desconectado' => 'danger', default => 'neutral',
+        } : 'neutral';
+        $healthTone = match(data_get($agentHealth, 'overallStatus')) {
+            'critical' => 'danger',
+            'warning' => 'warning',
+            'ok' => 'success',
+            default => 'neutral',
+        };
+        $topSoftware = collect(data_get($specs, 'top_software', []))->filter()->values();
+        if ($topSoftware->isEmpty()) {
+            $topSoftware = collect(data_get($agentSnapshot, 'InstalledSoftware', data_get($agentSnapshot, 'installedSoftware', [])))
+                ->map(fn ($item) => data_get($item, 'Name', data_get($item, 'name')))
+                ->filter()
+                ->take(8)
+                ->values();
+        }
+        $ipAddresses = data_get($specs, 'ip_addresses', data_get($agentDeviceData, 'IpAddresses', data_get($agentDeviceData, 'ipAddresses', [])));
+        $storageVolumes = data_get($specs, 'storage_volumes', data_get($agentDeviceData, 'StorageVolumes', data_get($agentDeviceData, 'storageVolumes', [])));
     @endphp
 
     <x-ui.page-header
@@ -35,10 +60,8 @@
 
     <div class="grid grid-cols-1 gap-4 xl:grid-cols-3">
 
-        {{-- Left column --}}
         <div class="xl:col-span-1 space-y-4">
 
-            {{-- Estado del activo --}}
             <x-ui.card>
                 <x-slot:header>
                     <h3 class="text-sm font-semibold text-slate-900">Estado del activo</h3>
@@ -81,7 +104,6 @@
                 </div>
             </x-ui.card>
 
-            {{-- Ubicación y responsable --}}
             <x-ui.card>
                 <x-slot:header>
                     <h3 class="text-sm font-semibold text-slate-900">Ubicación</h3>
@@ -110,16 +132,10 @@
                 </div>
             </x-ui.card>
 
-            {{-- Agente de monitoreo --}}
             @if ($asset->agentDevice)
             <x-ui.card>
                 <x-slot:header>
                     <h3 class="text-sm font-semibold text-slate-900">Agente de monitoreo</h3>
-                    @php
-                        $agentTone = match($asset->agentDevice->status->value) {
-                            'activo' => 'success', 'inactivo' => 'neutral', 'desconectado' => 'danger', default => 'neutral',
-                        };
-                    @endphp
                     <x-ui.badge :tone="$agentTone" :dot="true">{{ $asset->agentDevice->status->label() }}</x-ui.badge>
                 </x-slot:header>
                 <div class="space-y-2 text-sm">
@@ -143,11 +159,180 @@
             @endif
         </div>
 
-        {{-- Right columns --}}
-        <div class="xl:col-span-2">
+        <div class="xl:col-span-2 space-y-4">
+            @if ($specs || $agentHealth)
+            <x-ui.card>
+                <x-slot:header><h3 class="text-sm font-semibold text-slate-900">Datos técnicos sincronizados</h3></x-slot:header>
+
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between gap-4">
+                            <span class="text-slate-500">Hostname</span>
+                            <span class="text-slate-700 text-right">{{ data_get($specs, 'hostname', data_get($agentDeviceData, 'Hostname', data_get($agentDeviceData, 'hostname'))) ?? '—' }}</span>
+                        </div>
+                        <div class="flex justify-between gap-4">
+                            <span class="text-slate-500">Sistema operativo</span>
+                            <span class="text-slate-700 text-right">
+                                {{ trim((data_get($specs, 'operating_system', data_get($agentDeviceData, 'OperatingSystem', data_get($agentDeviceData, 'operatingSystem'))) ?? '') . ' ' . (data_get($specs, 'os_version', data_get($agentDeviceData, 'OsVersion', data_get($agentDeviceData, 'osVersion'))) ?? '')) ?: '—' }}
+                            </span>
+                        </div>
+                        <div class="flex justify-between gap-4">
+                            <span class="text-slate-500">Arquitectura</span>
+                            <span class="text-slate-700 text-right">{{ data_get($specs, 'os_architecture', data_get($agentDeviceData, 'OsArchitecture', data_get($agentDeviceData, 'osArchitecture'))) ?? '—' }}</span>
+                        </div>
+                        <div class="flex justify-between gap-4">
+                            <span class="text-slate-500">CPU</span>
+                            <span class="text-slate-700 text-right">{{ data_get($specs, 'cpu', data_get($agentDeviceData, 'ProcessorName', data_get($agentDeviceData, 'processorName'))) ?? '—' }}</span>
+                        </div>
+                        <div class="flex justify-between gap-4">
+                            <span class="text-slate-500">RAM</span>
+                            <span class="text-slate-700 text-right">
+                                {{ data_get($specs, 'ram_gb', data_get($agentDeviceData, 'TotalMemoryGb', data_get($agentDeviceData, 'totalMemoryGb'))) !== null ? data_get($specs, 'ram_gb', data_get($agentDeviceData, 'TotalMemoryGb', data_get($agentDeviceData, 'totalMemoryGb'))) . ' GB' : '—' }}
+                            </span>
+                        </div>
+                        <div class="flex justify-between gap-4">
+                            <span class="text-slate-500">Almacenamiento total</span>
+                            <span class="text-slate-700 text-right">{{ data_get($specs, 'total_storage_gb', data_get($agentDeviceData, 'TotalStorageGb', data_get($agentDeviceData, 'totalStorageGb'))) !== null ? data_get($specs, 'total_storage_gb', data_get($agentDeviceData, 'TotalStorageGb', data_get($agentDeviceData, 'totalStorageGb'))) . ' GB' : '—' }}</span>
+                        </div>
+                        <div class="flex justify-between gap-4">
+                            <span class="text-slate-500">Almacenamiento libre</span>
+                            <span class="text-slate-700 text-right">{{ data_get($specs, 'free_storage_gb', data_get($agentDeviceData, 'FreeStorageGb', data_get($agentDeviceData, 'freeStorageGb'))) !== null ? data_get($specs, 'free_storage_gb', data_get($agentDeviceData, 'FreeStorageGb', data_get($agentDeviceData, 'freeStorageGb'))) . ' GB' : '—' }}</span>
+                        </div>
+                        <div class="flex justify-between gap-4">
+                            <span class="text-slate-500">Dominio</span>
+                            <span class="text-slate-700 text-right">{{ data_get($specs, 'domain') ?? '—' }}</span>
+                        </div>
+                        <div class="flex justify-between gap-4">
+                            <span class="text-slate-500">Usuario</span>
+                            <span class="text-slate-700 text-right">{{ data_get($specs, 'user_name') ?? '—' }}</span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between gap-4">
+                            <span class="text-slate-500">Marca</span>
+                            <span class="text-slate-700 text-right">{{ $asset->brand ?? data_get($agentDeviceData, 'Manufacturer', data_get($agentDeviceData, 'manufacturer')) ?? '—' }}</span>
+                        </div>
+                        <div class="flex justify-between gap-4">
+                            <span class="text-slate-500">Modelo</span>
+                            <span class="text-slate-700 text-right">{{ $asset->model ?? data_get($agentDeviceData, 'Model', data_get($agentDeviceData, 'model')) ?? '—' }}</span>
+                        </div>
+                        <div class="flex justify-between gap-4">
+                            <span class="text-slate-500">Serie</span>
+                            <span class="text-slate-700 text-right">{{ $asset->serial_number ?? data_get($agentDeviceData, 'SerialNumber', data_get($agentDeviceData, 'serialNumber')) ?? '—' }}</span>
+                        </div>
+                        <div class="flex justify-between gap-4">
+                            <span class="text-slate-500">BIOS</span>
+                            <span class="text-slate-700 text-right">{{ data_get($specs, 'bios_version', data_get($agentDeviceData, 'BiosVersion', data_get($agentDeviceData, 'biosVersion'))) ?? '—' }}</span>
+                        </div>
+                        <div class="flex justify-between gap-4">
+                            <span class="text-slate-500">Placa madre</span>
+                            <span class="text-slate-700 text-right">
+                                {{ trim((data_get($specs, 'motherboard_manufacturer', data_get($agentDeviceData, 'MotherboardManufacturer', data_get($agentDeviceData, 'motherboardManufacturer'))) ?? '') . ' ' . (data_get($specs, 'motherboard_product', data_get($agentDeviceData, 'MotherboardProduct', data_get($agentDeviceData, 'motherboardProduct'))) ?? '')) ?: '—' }}
+                            </span>
+                        </div>
+                        <div class="flex justify-between gap-4">
+                            <span class="text-slate-500">Serie placa madre</span>
+                            <span class="text-slate-700 text-right">{{ data_get($specs, 'motherboard_serial_number', data_get($agentDeviceData, 'MotherboardSerialNumber', data_get($agentDeviceData, 'motherboardSerialNumber'))) ?? '—' }}</span>
+                        </div>
+                        <div class="flex justify-between gap-4">
+                            <span class="text-slate-500">Último arranque</span>
+                            <span class="text-slate-700 text-right">
+                                {{ data_get($specs, 'last_boot_time_utc', data_get($agentDeviceData, 'LastBootTimeUtc', data_get($agentDeviceData, 'lastBootTimeUtc'))) ? \Illuminate\Support\Carbon::parse(data_get($specs, 'last_boot_time_utc', data_get($agentDeviceData, 'LastBootTimeUtc', data_get($agentDeviceData, 'lastBootTimeUtc'))))->timezone(config('app.timezone'))->format('d/m/Y H:i') : '—' }}
+                            </span>
+                        </div>
+                        <div class="flex justify-between gap-4">
+                            <span class="text-slate-500">Snapshot</span>
+                            <span class="text-slate-700 text-right">
+                                {{ data_get($extra, 'collected_at_utc') ? \Illuminate\Support\Carbon::parse(data_get($extra, 'collected_at_utc'))->timezone(config('app.timezone'))->format('d/m/Y H:i') : '—' }}
+                            </span>
+                        </div>
+                        <div class="flex justify-between gap-4">
+                            <span class="text-slate-500">Software detectado</span>
+                            <span class="text-slate-700 text-right">{{ data_get($specs, 'software_count', count(data_get($agentSnapshot, 'InstalledSoftware', data_get($agentSnapshot, 'installedSoftware', [])))) ?? '—' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                        <p class="text-xs font-semibold tracking-wide text-slate-500 uppercase mb-2">IPs detectadas</p>
+                        @if (!empty($ipAddresses))
+                            <div class="flex flex-wrap gap-2">
+                                @foreach ($ipAddresses as $ip)
+                                    <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-mono text-slate-700">{{ $ip }}</span>
+                                @endforeach
+                            </div>
+                        @else
+                            <p class="text-sm text-slate-500">Sin IPs registradas.</p>
+                        @endif
+                    </div>
+
+                    <div>
+                        <p class="text-xs font-semibold tracking-wide text-slate-500 uppercase mb-2">Volúmenes de almacenamiento</p>
+                        @if (!empty($storageVolumes))
+                            <div class="space-y-2 text-sm">
+                                @foreach ($storageVolumes as $volume)
+                                    <div class="rounded-xl border border-slate-200 p-3">
+                                        <p class="font-medium text-slate-800">
+                                            {{ data_get($volume, 'Name', data_get($volume, 'name', '—')) }}
+                                            @if (data_get($volume, 'Label', data_get($volume, 'label')))
+                                                <span class="text-slate-500">· {{ data_get($volume, 'Label', data_get($volume, 'label')) }}</span>
+                                            @endif
+                                        </p>
+                                        <p class="text-slate-600">
+                                            {{ data_get($volume, 'FileSystem', data_get($volume, 'fileSystem', '—')) }}
+                                            · Total {{ data_get($volume, 'TotalGb', data_get($volume, 'totalGb', '—')) }} GB
+                                            · Libre {{ data_get($volume, 'FreeGb', data_get($volume, 'freeGb', '—')) }} GB
+                                            · Usado {{ data_get($volume, 'UsedPercent', data_get($volume, 'usedPercent', '—')) }}%
+                                        </p>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @else
+                            <p class="text-sm text-slate-500">Sin volúmenes registrados.</p>
+                        @endif
+                    </div>
+
+                    <div>
+                        <p class="text-xs font-semibold tracking-wide text-slate-500 uppercase mb-2">Salud del equipo</p>
+                        @if ($agentHealth)
+                            <div class="space-y-2 text-sm">
+                                <div class="flex items-center gap-2">
+                                    <x-ui.badge :tone="$healthTone" :dot="true">{{ strtoupper(data_get($agentHealth, 'overallStatus', 'unknown')) }}</x-ui.badge>
+                                </div>
+                                <p class="text-slate-700">Uptime: {{ data_get($agentHealth, 'uptimeHours') ? number_format((float) data_get($agentHealth, 'uptimeHours'), 2) . ' h' : '—' }}</p>
+                                <p class="text-slate-700">RAM usada: {{ data_get($agentHealth, 'memory.usedPercent') !== null ? number_format((float) data_get($agentHealth, 'memory.usedPercent'), 2) . '%' : '—' }}</p>
+                                @php $warnings = collect(data_get($agentHealth, 'warnings', []))->filter()->values(); @endphp
+                                @if ($warnings->isNotEmpty())
+                                    @foreach ($warnings as $warning)
+                                        <p class="text-slate-700">{{ $warning }}</p>
+                                    @endforeach
+                                @endif
+                            </div>
+                        @else
+                            <p class="text-sm text-slate-500">Sin estado de salud registrado.</p>
+                        @endif
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <p class="text-xs font-semibold tracking-wide text-slate-500 uppercase mb-2">Últimos programas detectados</p>
+                    @if ($topSoftware->isEmpty())
+                        <p class="text-sm text-slate-500">Sin programas listados en el snapshot sincronizado.</p>
+                    @else
+                        <div class="flex flex-wrap gap-2">
+                            @foreach ($topSoftware as $program)
+                                <span class="inline-flex items-center rounded-full bg-sigat-50 px-2.5 py-1 text-xs text-sigat-700">{{ $program }}</span>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            </x-ui.card>
+            @endif
+
             <x-ui.tabs active="historial" :tabs="['historial' => 'Historial', 'casos' => 'Casos de mantenimiento', 'documentos' => 'Documentos']">
 
-                {{-- Historial de movimientos --}}
                 <x-ui.tab-panel name="historial" x-show="activeTab === 'historial'">
                     @if ($asset->movements->isEmpty())
                         <x-ui.empty-state title="Sin movimientos" description="Este activo no tiene movimientos registrados." />
@@ -177,7 +362,6 @@
                     @endif
                 </x-ui.tab-panel>
 
-                {{-- Casos de mantenimiento --}}
                 <x-ui.tab-panel name="casos" x-show="activeTab === 'casos'">
                     @if ($asset->maintenanceCases->isEmpty())
                         <x-ui.empty-state title="Sin casos" description="Este activo no tiene casos de mantenimiento." />
@@ -207,7 +391,6 @@
                     @endif
                 </x-ui.tab-panel>
 
-                {{-- Documentos --}}
                 <x-ui.tab-panel name="documentos" x-show="activeTab === 'documentos'">
                     @if ($asset->documents->isEmpty())
                         <x-ui.empty-state title="Sin documentos" description="No hay documentos asociados a este activo." />

@@ -194,7 +194,7 @@
                         <div class="flex-1">
                             <div class="flex items-center gap-2">
                                 <span class="text-sm font-medium text-slate-800">{{ $item->name }}</span>
-                                <x-ui.badge tone="neutral" size="sm">{{ $item->type->label() }}</x-ui.badge>
+                                <x-ui.badge tone="neutral" size="sm">{{ $item->item_type->label() }}</x-ui.badge>
                             </div>
                             <p class="text-xs text-slate-400 mt-0.5">{{ $item->quantity }} × S/ {{ number_format($item->unit_cost, 2) }}</p>
                         </div>

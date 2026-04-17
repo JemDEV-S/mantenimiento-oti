@@ -55,7 +55,12 @@ class AgentDeviceService
             'last_heartbeat_at'  => now(),
             'status'             => AgentDeviceStatus::ACTIVO->value,
             'last_snapshot_json' => $dto->last_snapshot_json ?? $device->last_snapshot_json,
+            'last_health_json'   => $dto->health ?? $device->last_health_json,
         ]);
+
+        if ($device->asset && $dto->health) {
+            $this->updateAssetFromAgentData($device->asset, null, $dto->health, $device);
+        }
 
         if ($dto->asset_code || $dto->organizational_unit_id || $dto->responsible_employee_id) {
             $this->bindAsset(
@@ -69,6 +74,16 @@ class AgentDeviceService
 
         $device->syncs()->create([
             'sync_type'  => AgentSyncType::HEARTBEAT->value,
+            'payload_json' => [
+                'sent_at_utc' => $dto->sent_at_utc,
+                'agent_version' => $dto->agent_version,
+                'status' => $dto->status,
+                'last_ip' => $dto->last_ip,
+                'health' => $dto->health,
+                'asset_code' => $dto->asset_code,
+                'organizational_unit_id' => $dto->organizational_unit_id,
+                'responsible_employee_id' => $dto->responsible_employee_id,
+            ],
             'status'     => \App\Enums\AgentSyncStatus::PROCESADO->value,
             'synced_at'  => now(),
         ]);
@@ -82,6 +97,10 @@ class AgentDeviceService
 
         if ($dto->sync_type === AgentSyncType::SNAPSHOT && $dto->payload_json) {
             $device->update(['last_snapshot_json' => $dto->payload_json]);
+
+            if ($device->asset) {
+                $this->updateAssetFromAgentData($device->asset, $dto->payload_json, $device->last_health_json, $device);
+            }
         }
 
         $sync->update(['status' => \App\Enums\AgentSyncStatus::PROCESADO->value]);
@@ -140,6 +159,8 @@ class AgentDeviceService
             'responsible_employee_id' => $responsibleEmployeeId ?? $asset->responsible_employee_id,
         ]);
 
+        $this->updateAssetFromAgentData($asset, $snapshot, $device->last_health_json, $device);
+
         $device->update(['asset_id' => $asset->id]);
 
         return $device->fresh();
@@ -181,22 +202,108 @@ class AgentDeviceService
             'condition' => AssetCondition::BUENO->value,
             'organizational_unit_id' => $organizationalUnitId,
             'responsible_employee_id' => $responsibleEmployeeId,
-            'specs_json' => [
-                'hostname' => $hostname,
-                'cpu' => data_get($snapshot, 'Device.ProcessorName') ?? data_get($snapshot, 'device.processorName'),
-                'ram_gb' => data_get($snapshot, 'Device.TotalMemoryGb') ?? data_get($snapshot, 'device.totalMemoryGb'),
-                'operating_system' => $operatingSystem,
-                'os_version' => data_get($snapshot, 'Device.OsVersion') ?? data_get($snapshot, 'device.osVersion'),
-                'os_architecture' => data_get($snapshot, 'Device.OsArchitecture') ?? data_get($snapshot, 'device.osArchitecture'),
-                'ip_addresses' => data_get($snapshot, 'Device.IpAddresses') ?? data_get($snapshot, 'device.ipAddresses'),
-            ],
-            'extra_json' => [
-                'source' => 'agent',
-                'agent_device_uuid' => $device->uuid,
-                'collected_at_utc' => data_get($snapshot, 'CollectedAtUtc') ?? data_get($snapshot, 'collectedAtUtc'),
-                'bios_version' => data_get($snapshot, 'Device.BiosVersion') ?? data_get($snapshot, 'device.biosVersion'),
-            ],
+            'specs_json' => $this->buildAssetSpecsFromSnapshot($snapshot),
+            'extra_json' => $this->buildAssetExtraFromAgentData($snapshot, null, $device),
             'notes' => 'Activo registrado automaticamente desde AgentSync.',
         ]);
+    }
+
+    private function updateAssetFromAgentData(
+        Asset $asset,
+        ?array $snapshot,
+        ?array $health,
+        AgentDevice $device,
+    ): void {
+        $updates = [
+            'brand' => $this->limitString(
+                data_get($snapshot, 'Device.Manufacturer')
+                    ?? data_get($snapshot, 'device.manufacturer')
+                    ?? $asset->brand,
+                100
+            ),
+            'model' => $this->limitString(
+                data_get($snapshot, 'Device.Model')
+                    ?? data_get($snapshot, 'device.model')
+                    ?? $asset->model,
+                100
+            ),
+            'serial_number' => $this->limitString(
+                data_get($snapshot, 'Device.SerialNumber')
+                    ?? data_get($snapshot, 'device.serialNumber')
+                    ?? data_get($snapshot, 'device.serial_number')
+                    ?? $asset->serial_number,
+                100
+            ),
+            'specs_json' => array_merge($asset->specs_json ?? [], $this->buildAssetSpecsFromSnapshot($snapshot)),
+            'extra_json' => array_merge($asset->extra_json ?? [], $this->buildAssetExtraFromAgentData($snapshot, $health, $device)),
+        ];
+
+        $asset->update($updates);
+    }
+
+    private function buildAssetSpecsFromSnapshot(?array $snapshot): array
+    {
+        if (! $snapshot) {
+            return [];
+        }
+
+        $software = data_get($snapshot, 'InstalledSoftware')
+            ?? data_get($snapshot, 'installedSoftware')
+            ?? [];
+
+        $softwareNames = collect($software)
+            ->map(fn ($item) => data_get($item, 'Name') ?? data_get($item, 'name'))
+            ->filter()
+            ->take(8)
+            ->values()
+            ->all();
+
+        return array_filter([
+            'hostname' => data_get($snapshot, 'Device.Hostname') ?? data_get($snapshot, 'device.hostname'),
+            'cpu' => data_get($snapshot, 'Device.ProcessorName') ?? data_get($snapshot, 'device.processorName'),
+            'ram_gb' => data_get($snapshot, 'Device.TotalMemoryGb') ?? data_get($snapshot, 'device.totalMemoryGb'),
+            'total_storage_gb' => data_get($snapshot, 'Device.TotalStorageGb') ?? data_get($snapshot, 'device.totalStorageGb'),
+            'free_storage_gb' => data_get($snapshot, 'Device.FreeStorageGb') ?? data_get($snapshot, 'device.freeStorageGb'),
+            'storage_volumes' => data_get($snapshot, 'Device.StorageVolumes') ?? data_get($snapshot, 'device.storageVolumes'),
+            'operating_system' => data_get($snapshot, 'Device.OperatingSystem') ?? data_get($snapshot, 'device.operatingSystem') ?? data_get($snapshot, 'device.operating_system'),
+            'os_version' => data_get($snapshot, 'Device.OsVersion') ?? data_get($snapshot, 'device.osVersion'),
+            'os_architecture' => data_get($snapshot, 'Device.OsArchitecture') ?? data_get($snapshot, 'device.osArchitecture'),
+            'ip_addresses' => data_get($snapshot, 'Device.IpAddresses') ?? data_get($snapshot, 'device.ipAddresses'),
+            'bios_version' => data_get($snapshot, 'Device.BiosVersion') ?? data_get($snapshot, 'device.biosVersion'),
+            'motherboard_manufacturer' => data_get($snapshot, 'Device.MotherboardManufacturer') ?? data_get($snapshot, 'device.motherboardManufacturer'),
+            'motherboard_product' => data_get($snapshot, 'Device.MotherboardProduct') ?? data_get($snapshot, 'device.motherboardProduct'),
+            'motherboard_serial_number' => data_get($snapshot, 'Device.MotherboardSerialNumber') ?? data_get($snapshot, 'device.motherboardSerialNumber'),
+            'domain' => data_get($snapshot, 'Device.Domain') ?? data_get($snapshot, 'device.domain'),
+            'user_name' => data_get($snapshot, 'Device.UserName') ?? data_get($snapshot, 'device.userName'),
+            'last_boot_time_utc' => data_get($snapshot, 'Device.LastBootTimeUtc') ?? data_get($snapshot, 'device.lastBootTimeUtc'),
+            'software_count' => is_countable($software) ? count($software) : null,
+            'top_software' => $softwareNames,
+        ], fn ($value) => $value !== null && $value !== '');
+    }
+
+    private function buildAssetExtraFromAgentData(?array $snapshot, ?array $health, AgentDevice $device): array
+    {
+        $binding = data_get($snapshot, 'AdministrativeBinding')
+            ?? data_get($snapshot, 'administrativeBinding')
+            ?? [];
+
+        return array_filter([
+            'source' => 'agent',
+            'agent_device_uuid' => $device->uuid,
+            'collected_at_utc' => data_get($snapshot, 'CollectedAtUtc') ?? data_get($snapshot, 'collectedAtUtc'),
+            'last_health' => $health,
+            'asset_code' => data_get($binding, 'AssetCode') ?? data_get($binding, 'assetCode'),
+            'organizational_unit_id' => data_get($binding, 'OrganizationalUnitId') ?? data_get($binding, 'organizationalUnitId'),
+            'responsible_employee_id' => data_get($binding, 'ResponsibleEmployeeId') ?? data_get($binding, 'responsibleEmployeeId'),
+        ], fn ($value) => $value !== null && $value !== '');
+    }
+
+    private function limitString(?string $value, int $limit): ?string
+    {
+        if ($value === null || trim($value) === '') {
+            return null;
+        }
+
+        return mb_substr(trim($value), 0, $limit);
     }
 }

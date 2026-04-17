@@ -23,6 +23,7 @@ class AgentDevice extends Model
         'last_heartbeat_at',
         'status',
         'last_snapshot_json',
+        'last_health_json',
         'api_token',
     ];
 
@@ -30,6 +31,7 @@ class AgentDevice extends Model
         'status'             => AgentDeviceStatus::class,
         'last_heartbeat_at'  => 'datetime',
         'last_snapshot_json' => 'array',
+        'last_health_json'   => 'array',
     ];
 
     protected $hidden = ['api_token'];

@@ -14,7 +14,6 @@
         </x-slot:actions>
     </x-ui.page-header>
 
-    {{-- Filters --}}
     <form method="GET" action="{{ route('assets.index') }}" class="flex flex-wrap items-end gap-3 mb-4">
         <div class="flex-1 min-w-[220px]">
             <x-ui.search-input name="search" :value="request('search')" placeholder="Buscar por nombre, código o serie..." />
@@ -60,6 +59,7 @@
         <x-slot:head>
             <x-ui.th>Activo</x-ui.th>
             <x-ui.th>Tipo</x-ui.th>
+            <x-ui.th>IPs</x-ui.th>
             <x-ui.th>Estado</x-ui.th>
             <x-ui.th>Condición</x-ui.th>
             <x-ui.th>Unidad</x-ui.th>
@@ -85,6 +85,7 @@
                 'obsoleto' => 'neutral',
                 default    => 'neutral',
             };
+            $ipAddresses = collect(data_get($asset->specs_json, 'ip_addresses', []))->filter()->values();
         @endphp
         <tr class="hover:bg-slate-50/50 transition-colors">
             <x-ui.td>
@@ -99,6 +100,20 @@
                 </div>
             </x-ui.td>
             <x-ui.td><span class="text-sm text-slate-600">{{ $asset->asset_type->label() }}</span></x-ui.td>
+            <x-ui.td>
+                @if ($ipAddresses->isNotEmpty())
+                    <div class="space-y-1">
+                        @foreach ($ipAddresses->take(2) as $ip)
+                            <div class="font-mono text-xs text-slate-600">{{ $ip }}</div>
+                        @endforeach
+                        @if ($ipAddresses->count() > 2)
+                            <div class="text-xs text-slate-400">+{{ $ipAddresses->count() - 2 }} más</div>
+                        @endif
+                    </div>
+                @else
+                    <span class="text-xs text-slate-400">—</span>
+                @endif
+            </x-ui.td>
             <x-ui.td><x-ui.badge :tone="$statusTone" :dot="true">{{ $asset->status->label() }}</x-ui.badge></x-ui.td>
             <x-ui.td><x-ui.badge :tone="$conditionTone">{{ $asset->condition->label() }}</x-ui.badge></x-ui.td>
             <x-ui.td><span class="text-sm text-slate-600">{{ $asset->organizationalUnit?->name ?? '—' }}</span></x-ui.td>
@@ -130,7 +145,7 @@
         </tr>
         @empty
         <tr>
-            <td colspan="7" class="py-16">
+            <td colspan="8" class="py-16">
                 <x-ui.empty-state title="No hay activos registrados" description="Registra el primer activo tecnológico." />
             </td>
         </tr>
