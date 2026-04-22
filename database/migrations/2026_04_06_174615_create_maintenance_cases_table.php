@@ -29,7 +29,7 @@ return new class extends Migration
             $table->date('next_maintenance_date')->nullable();
             $table->string('conformity_name')->nullable();
             $table->timestamp('conformity_date')->nullable();
-            $table->decimal('total_cost', 12, 2)->default(0);
+            $table->decimal('total_cost', 12, 2)->nullable()->default(0);
             $table->text('notes')->nullable();
             $table->unsignedBigInteger('created_by');
             $table->timestamps();

@@ -12,6 +12,16 @@ class UpdateEmployeeRequest extends FormRequest
         return $this->user()->can('employee.edit');
     }
 
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'name'      => trim($this->input('first_name', '')),
+            'full_name' => trim(
+                $this->input('first_name', '') . ' ' . $this->input('last_name', '')
+            ),
+        ]);
+    }
+
     public function rules(): array
     {
         $employee = $this->route('employee');

@@ -17,7 +17,7 @@
         <input type="hidden" name="{{ $name }}" :value="on ? 1 : 0">
         <button
             type="button"
-            @click="on = !on"
+            @click="on = !on; $dispatch('toggle:{{ $name }}', { value: on })"
             :class="on ? 'bg-sigat-600' : 'bg-slate-200'"
             class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-sigat-500/20 focus:ring-offset-2"
             {{ $attributes }}

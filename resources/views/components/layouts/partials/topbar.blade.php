@@ -32,7 +32,7 @@
         <div x-data="{ open: false }" class="relative">
             <button @click="open = !open" class="flex items-center gap-2.5 pl-3 pr-2 py-1.5 rounded-xl hover:bg-slate-100 transition-colors">
                 <div class="text-right hidden sm:block">
-                    <p class="text-sm font-semibold text-slate-800 leading-tight">{{ auth()->user()->name ?? 'Admin' }}</p>
+                    <p class="text-sm font-semibold text-slate-800 leading-tight">{{ auth()->user()->username ?? 'Admin' }}</p>
                     <p class="text-xs text-slate-400">{{ auth()->user()?->role?->name ?? 'Administrador' }}</p>
                 </div>
                 <x-ui.avatar :name="auth()->user()->name ?? 'A'" size="sm" />

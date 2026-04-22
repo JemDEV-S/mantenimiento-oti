@@ -50,6 +50,21 @@
                 <x-ui.button type="submit">Crear campaña</x-ui.button>
                 <x-ui.button variant="secondary" href="{{ route('campaigns.index') }}">Cancelar</x-ui.button>
             </div>
+
+            {{-- Info bulk ops --}}
+            <div class="flex items-start gap-3 px-4 py-3 bg-sigat-50 border border-sigat-200 rounded-xl">
+                <svg class="w-5 h-5 text-sigat-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
+                </svg>
+                <div>
+                    <p class="text-sm font-medium text-sigat-800">Asignación masiva disponible tras crear</p>
+                    <p class="text-xs text-sigat-600 mt-0.5">
+                        Una vez creada la campaña podrás <strong>agregar activos por unidad organizacional</strong>
+                        asignándolos a un técnico, y <strong>crear casos de mantenimiento masivos</strong>
+                        para todos los activos de la campaña en un solo paso.
+                    </p>
+                </div>
+            </div>
         </div>
     </form>
 

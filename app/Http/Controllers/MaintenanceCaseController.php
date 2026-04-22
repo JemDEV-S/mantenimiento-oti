@@ -15,12 +15,15 @@ use App\Http\Requests\MaintenanceItem\StoreMaintenanceItemRequest;
 use App\Models\Asset;
 use App\Models\Employee;
 use App\Models\MaintenanceCase;
+use App\Services\Document\DocumentGeneratorService;
 use App\Services\MaintenanceCase\MaintenanceCaseService;
+use Illuminate\Support\Facades\Storage;
 
 class MaintenanceCaseController extends Controller
 {
     public function __construct(
         private readonly MaintenanceCaseService $caseService,
+        private readonly DocumentGeneratorService $docGenerator,
     ) {}
 
     public function index()
@@ -129,6 +132,17 @@ class MaintenanceCaseController extends Controller
         $this->caseService->removeItem($maintenanceCase, $maintenanceItem);
 
         return back()->with('success', 'Item eliminado correctamente.');
+    }
+
+    public function generateInforme(MaintenanceCase $maintenanceCase)
+    {
+        $this->authorize('maintenance-case.view');
+
+        $document = $this->docGenerator->generateInformeTecnico($maintenanceCase, auth()->user());
+
+        $filename = str_replace(['/', '\\', ':'], '-', $document->title) . '.pdf';
+
+        return Storage::disk('local')->download($document->file_path, $filename);
     }
 
     public function destroy(MaintenanceCase $maintenanceCase)

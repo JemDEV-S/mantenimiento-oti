@@ -23,6 +23,32 @@
             @can('campaign.edit')
             <x-ui.button variant="secondary" size="sm" href="{{ route('campaigns.edit', $campaign) }}">Editar</x-ui.button>
             @endcan
+            <div x-data="{ open: false }" class="relative">
+                <button @click="open = !open"
+                        class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition-colors">
+                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+                    Acta de mantenimiento
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div x-show="open" @click.outside="open = false" x-cloak
+                     class="absolute right-0 top-full mt-1 z-30 w-72 rounded-xl border border-slate-200 bg-white shadow-lg p-3">
+                    <p class="text-xs text-slate-500 mb-2 font-medium">Seleccionar unidad orgánica</p>
+                    <form method="POST" action="{{ route('campaigns.generate-acta', $campaign) }}">
+                        @csrf
+                        <select name="unit_id" required
+                                class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2">
+                            <option value="">-- Elegir unidad --</option>
+                            @foreach ($organizationalUnits as $ou)
+                            <option value="{{ $ou->id }}">{{ $ou->name }}</option>
+                            @endforeach
+                        </select>
+                        <button type="submit"
+                                class="w-full rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+                            Generar y descargar PDF
+                        </button>
+                    </form>
+                </div>
+            </div>
         </x-slot:actions>
     </x-ui.page-header>
 
@@ -124,6 +150,89 @@
                     <x-ui.input name="scheduled_date" type="date" label="Fecha programada" :value="old('scheduled_date')" />
                     <x-ui.button type="submit" class="w-full justify-center" size="sm">Agregar a campaña</x-ui.button>
                 </form>
+            </x-ui.card>
+
+            {{-- Bulk: agregar por unidad --}}
+            <x-ui.card>
+                <x-slot:header>
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-900">Agregar activos por unidad</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Agrega todos los activos de una unidad a un solo técnico</p>
+                    </div>
+                </x-slot:header>
+                <form method="POST" action="{{ route('campaigns.assets.bulk-unit', $campaign) }}" class="space-y-3">
+                    @csrf
+                    <x-ui.select
+                        name="unit_id"
+                        label="Unidad organizacional"
+                        :value="old('unit_id')"
+                        :options="$organizationalUnits->pluck('name', 'id')->toArray()"
+                        placeholder="Seleccionar unidad..."
+                    />
+                    <x-ui.select
+                        name="assigned_technician_id"
+                        label="Técnico asignado"
+                        :value="old('assigned_technician_id')"
+                        :options="$technicians->pluck('full_name', 'id')->toArray()"
+                        placeholder="Sin técnico"
+                    />
+                    <x-ui.input name="scheduled_date" type="date" label="Fecha programada" :value="old('scheduled_date')" />
+                    <x-ui.button type="submit" class="w-full justify-center" size="sm" variant="secondary">
+                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                        Agregar todos por unidad
+                    </x-ui.button>
+                </form>
+            </x-ui.card>
+
+            {{-- Bulk: crear casos para todos los activos --}}
+            <x-ui.card>
+                <x-slot:header>
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-900">Crear casos masivos</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Crea casos para todos los activos sin caso asignado</p>
+                    </div>
+                </x-slot:header>
+                @php $pendingCases = $campaign->campaignAssets->whereNull('maintenance_case_id')->count(); @endphp
+                @if ($pendingCases > 0)
+                <form method="POST" action="{{ route('campaigns.cases.bulk-create', $campaign) }}" class="space-y-3"
+                      onsubmit="return confirm('¿Crear casos de mantenimiento para los {{ $pendingCases }} activo(s) sin caso?')">
+                    @csrf
+                    <div class="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                        <svg class="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z"/></svg>
+                        <span class="text-xs text-amber-700">{{ $pendingCases }} activo(s) sin caso de mantenimiento</span>
+                    </div>
+                    <x-ui.select
+                        name="assigned_technician_id"
+                        label="Técnico responsable"
+                        :value="old('assigned_technician_id')"
+                        :options="$technicians->pluck('full_name', 'id')->toArray()"
+                        placeholder="Seleccionar técnico..."
+                    />
+                    <x-ui.select
+                        name="maintenance_type"
+                        label="Tipo de mantenimiento"
+                        :value="old('maintenance_type', 'preventivo')"
+                        :options="collect($maintenanceTypes)->mapWithKeys(fn($t) => [$t->value => $t->label()])->toArray()"
+                    />
+                    <x-ui.select
+                        name="priority"
+                        label="Prioridad"
+                        :value="old('priority', 'media')"
+                        :options="collect($priorities)->mapWithKeys(fn($p) => [$p->value => $p->label()])->toArray()"
+                    />
+                    <x-ui.textarea name="problem_description" label="Descripción del problema" rows="2"
+                        :value="old('problem_description')" placeholder="Descripción general para todos los casos..." />
+                    <x-ui.button type="submit" class="w-full justify-center" size="sm">
+                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z"/></svg>
+                        Crear {{ $pendingCases }} caso(s)
+                    </x-ui.button>
+                </form>
+                @else
+                <div class="flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg">
+                    <svg class="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span class="text-xs text-emerald-700">Todos los activos tienen caso asignado.</span>
+                </div>
+                @endif
             </x-ui.card>
             @endif
             @endcan

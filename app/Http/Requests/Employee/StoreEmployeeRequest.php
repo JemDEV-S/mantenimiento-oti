@@ -11,6 +11,16 @@ class StoreEmployeeRequest extends FormRequest
         return $this->user()->can('employee.create');
     }
 
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'name'      => trim($this->input('first_name', '')),
+            'full_name' => trim(
+                $this->input('first_name', '') . ' ' . $this->input('last_name', '')
+            ),
+        ]);
+    }
+
     public function rules(): array
     {
         return [

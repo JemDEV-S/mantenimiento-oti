@@ -39,25 +39,77 @@
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <x-ui.input name="position" label="Cargo" :value="old('position')" placeholder="Ej: Asistente administrativo" />
-                    <x-ui.select
+                    <x-ui.searchable-select
                         name="organizational_unit_id"
                         label="Unidad organizacional"
                         :value="old('organizational_unit_id')"
                         :options="$units->pluck('name', 'id')->toArray()"
                         placeholder="Seleccionar unidad..."
+                        searchPlaceholder="Buscar unidad..."
                     />
                 </div>
 
-                <div class="mt-4 pt-4 border-t border-slate-100" x-data="{ isTech: {{ old('is_technician') ? 'true' : 'false' }} }">
+                <div
+                    class="mt-4 pt-4 border-t border-slate-100"
+                    x-data="{
+                        isTech: {{ old('is_technician') ? 'true' : 'false' }},
+                        usernamePreview: '',
+                        dniPreview: '',
+                        buildUsername() {
+                            const normalize = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z]/g, '');
+                            const firstName = document.querySelector('[name=first_name]')?.value ?? '';
+                            const lastName  = document.querySelector('[name=last_name]')?.value ?? '';
+                            const f = normalize(firstName.trim().split(/\s+/)[0] ?? '');
+                            const l = normalize(lastName.trim().split(/\s+/)[0] ?? '');
+                            this.usernamePreview = f ? (f[0] + l) : '';
+                            this.dniPreview = document.querySelector('[name=dni]')?.value ?? '';
+                        },
+                        init() {
+                            this.buildUsername();
+                            ['first_name', 'last_name', 'dni'].forEach(field => {
+                                document.querySelector('[name=' + field + ']')
+                                    ?.addEventListener('input', () => this.buildUsername());
+                            });
+                        }
+                    }"
+                    x-on:toggle:is_technician.window="isTech = $event.detail.value"
+                >
                     <x-ui.toggle name="is_technician" label="Es técnico de mantenimiento"
                         :checked="old('is_technician', false)"
                         hint="Los técnicos pueden ser asignados a casos de mantenimiento."
-                        x-model="isTech"
                     />
 
-                    <div x-show="isTech" x-cloak class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        <x-ui.input name="specialty" label="Especialidad técnica" :value="old('specialty')" placeholder="Ej: Hardware, Redes, Software..." />
-                        <x-ui.input name="technical_level" label="Nivel técnico" :value="old('technical_level')" placeholder="Ej: Junior, Senior..." />
+                    <div x-show="isTech" x-cloak class="mt-4 space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                            <x-ui.input name="specialty" label="Especialidad técnica" :value="old('specialty')" placeholder="Ej: Hardware, Redes, Software..." />
+                            <x-ui.input name="technical_level" label="Nivel técnico" :value="old('technical_level')" placeholder="Ej: Junior, Senior..." />
+                        </div>
+
+                        {{-- Preview cuenta de usuario --}}
+                        <div class="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                            <div class="flex items-start gap-3">
+                                <svg class="w-4 h-4 text-blue-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
+                                </svg>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-semibold text-blue-800">Se creará una cuenta de acceso al sistema</p>
+                                    <div class="mt-2.5 grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+                                        <div class="bg-white/70 rounded-lg px-3 py-2 border border-blue-100">
+                                            <span class="text-xs text-blue-500 uppercase tracking-wide font-medium block mb-0.5">Usuario</span>
+                                            <span class="font-mono font-semibold text-slate-800" x-text="usernamePreview || '—'"></span>
+                                        </div>
+                                        <div class="bg-white/70 rounded-lg px-3 py-2 border border-blue-100">
+                                            <span class="text-xs text-blue-500 uppercase tracking-wide font-medium block mb-0.5">Contraseña</span>
+                                            <span class="font-mono font-semibold text-slate-800" x-text="dniPreview || '—'"></span>
+                                        </div>
+                                        <div class="bg-white/70 rounded-lg px-3 py-2 border border-blue-100">
+                                            <span class="text-xs text-blue-500 uppercase tracking-wide font-medium block mb-0.5">Rol</span>
+                                            <span class="font-mono font-semibold text-slate-800">Técnico</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </x-ui.card>

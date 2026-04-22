@@ -9,6 +9,12 @@ return [
         ['key' => 'documents', 'label' => 'Documentos', 'route' => null, 'icon' => 'document'],
         ['key' => 'users', 'label' => 'Usuarios', 'route' => null, 'icon' => 'users'],
     ],
+
+    'sidebar_technician' => [
+        ['label' => 'Mi Panel', 'route' => 'tecnico.dashboard', 'description' => 'Casos asignados y resumen'],
+        ['label' => 'Cola de trabajo', 'route' => 'tecnico.work-queue', 'description' => 'Pendientes, en proceso y completados'],
+        ['label' => 'Atender equipo', 'route' => 'tecnico.attend-asset', 'description' => 'Flujo rapido de mantenimiento'],
+    ],
     'sidebar_submenus' => [
         'assets' => [
             ['label' => 'Inventario', 'route' => 'assets.index', 'description' => 'Gestionar activos tecnologicos'],

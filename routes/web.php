@@ -13,6 +13,7 @@ use App\Http\Controllers\OrganizationalUnitController;
 use App\Http\Controllers\Permission\PermissionController;
 use App\Http\Controllers\Role\RoleController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\TechnicianController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -56,6 +57,8 @@ Route::middleware(['auth', 'user.active'])->group(function () {
     // ── Activos ───────────────────────────────────────────────────────────────
     Route::middleware('permission:asset.view')->group(function () {
         Route::resource('assets', AssetController::class);
+        Route::get('assets/{asset}/generate-ficha',     [AssetController::class, 'generateFicha'])->name('assets.generate-ficha');
+        Route::get('assets/{asset}/generate-historial', [AssetController::class, 'generateHistorial'])->name('assets.generate-historial');
     });
 
     // ── Movimientos de activos ────────────────────────────────────────────────
@@ -68,6 +71,9 @@ Route::middleware(['auth', 'user.active'])->group(function () {
         Route::resource('campaigns', MaintenanceCampaignController::class);
         Route::post('campaigns/{campaign}/assets', [MaintenanceCampaignController::class, 'addAsset'])->name('campaigns.assets.add');
         Route::delete('campaigns/{campaign}/assets/{asset}', [MaintenanceCampaignController::class, 'removeAsset'])->name('campaigns.assets.remove');
+        Route::post('campaigns/{campaign}/assets/bulk-unit', [MaintenanceCampaignController::class, 'bulkAddByUnit'])->name('campaigns.assets.bulk-unit');
+        Route::post('campaigns/{campaign}/cases/bulk-create', [MaintenanceCampaignController::class, 'bulkCreateCases'])->name('campaigns.cases.bulk-create');
+        Route::post('campaigns/{campaign}/generate-acta', [MaintenanceCampaignController::class, 'generateActa'])->name('campaigns.generate-acta');
     });
 
     // ── Casos de mantenimiento ────────────────────────────────────────────────
@@ -76,6 +82,7 @@ Route::middleware(['auth', 'user.active'])->group(function () {
         Route::patch('maintenance-cases/{maintenanceCase}/close', [MaintenanceCaseController::class, 'close'])->name('maintenance-cases.close');
         Route::post('maintenance-cases/{maintenanceCase}/items', [MaintenanceCaseController::class, 'addItem'])->name('maintenance-cases.items.add');
         Route::delete('maintenance-cases/{maintenanceCase}/items/{item}', [MaintenanceCaseController::class, 'removeItem'])->name('maintenance-cases.items.remove');
+        Route::get('maintenance-cases/{maintenanceCase}/generate-informe', [MaintenanceCaseController::class, 'generateInforme'])->name('maintenance-cases.generate-informe');
     });
 
     // ── Documentos ────────────────────────────────────────────────────────────
@@ -96,5 +103,18 @@ Route::middleware(['auth', 'user.active'])->group(function () {
     Route::middleware('permission:setting.view')->group(function () {
         Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
         Route::patch('settings/{setting}', [SettingController::class, 'update'])->name('settings.update');
+    });
+
+    // ── Panel técnico ──────────────────────────────────────────────────────────
+    Route::prefix('tecnico')->name('tecnico.')->group(function () {
+        Route::get('/',        [TechnicianController::class, 'dashboard'])->name('dashboard');
+        Route::get('/cola',    [TechnicianController::class, 'workQueue'])->name('work-queue');
+        Route::get('/atender', [TechnicianController::class, 'attendAsset'])->name('attend-asset');
+        Route::post('/atender', [TechnicianController::class, 'storeAttention'])->name('attend-asset.store');
+
+        Route::prefix('casos')->name('cases.')->group(function () {
+            Route::get('/{maintenanceCase}',          [TechnicianController::class, 'caseDetail'])->name('show');
+            Route::patch('/{maintenanceCase}/progreso', [TechnicianController::class, 'updateProgress'])->name('progress');
+        });
     });
 });

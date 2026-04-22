@@ -32,6 +32,21 @@
             </button>
         @endforeach
 
+        {{-- Técnico (solo rol tecnico y admin) --}}
+        @hasanyrole('tecnico|admin')
+        <button
+            @click="$store.sidebar.toggle('tecnico')"
+            :class="$store.sidebar.activeModule === 'tecnico' ? 'bg-sigat-600/25 text-white border-sigat-400/40 shadow-sm shadow-sigat-900/20' : 'hover:text-white hover:bg-rail-hover border-transparent'"
+            class="glow-indicator group relative flex items-center justify-center w-11 h-11 rounded-xl border text-white/85 transition-all duration-200"
+            title="Panel Técnico"
+        >
+            @include('components.icons.clipboard')
+            <span class="absolute left-full ml-3 px-2.5 py-1 rounded-lg bg-slate-800 text-white text-xs font-medium whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 shadow-xl">
+                Panel Técnico
+            </span>
+        </button>
+        @endhasanyrole
+
         {{-- Spacer --}}
         <div class="flex-1"></div>
 
@@ -82,6 +97,20 @@
                 @endforeach
             </div>
         @endforeach
+
+        {{-- Técnico submenu --}}
+        @hasanyrole('tecnico|admin')
+        @php $technicianLinks = config('navigation.sidebar_technician', []); @endphp
+        <div x-show="$store.sidebar.activeModule === 'tecnico'" class="space-y-1" x-cloak>
+            @foreach ($technicianLinks as $item)
+                <a href="{{ route($item['route']) }}"
+                   class="group flex flex-col gap-0.5 px-3 py-3 rounded-xl text-slate-300 hover:bg-white/5 hover:text-white transition-all duration-200">
+                    <span class="font-medium text-sm">{{ $item['label'] }}</span>
+                    <span class="text-xs text-slate-500 group-hover:text-slate-400">{{ $item['description'] }}</span>
+                </a>
+            @endforeach
+        </div>
+        @endhasanyrole
 
         {{-- Settings submenu --}}
         <div x-show="$store.sidebar.activeModule === 'settings'" class="space-y-1" x-cloak>

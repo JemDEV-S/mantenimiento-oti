@@ -13,11 +13,14 @@ use App\Models\Asset;
 use App\Models\Employee;
 use App\Models\OrganizationalUnit;
 use App\Services\Asset\AssetService;
+use App\Services\Document\DocumentGeneratorService;
+use Illuminate\Support\Facades\Storage;
 
 class AssetController extends Controller
 {
     public function __construct(
         private readonly AssetService $assetService,
+        private readonly DocumentGeneratorService $docGenerator,
     ) {}
 
     public function index()
@@ -89,6 +92,28 @@ class AssetController extends Controller
 
         return redirect()->route('assets.show', $asset)
             ->with('success', 'Activo actualizado correctamente.');
+    }
+
+    public function generateFicha(Asset $asset)
+    {
+        $this->authorize('asset.view');
+
+        $document = $this->docGenerator->generateFichaTecnica($asset, auth()->user());
+
+        $filename = str_replace(['/', '\\', ':'], '-', $document->title) . '.pdf';
+
+        return Storage::disk('local')->download($document->file_path, $filename);
+    }
+
+    public function generateHistorial(Asset $asset)
+    {
+        $this->authorize('asset.view');
+
+        $document = $this->docGenerator->generateHistorialMantenimiento($asset, auth()->user());
+
+        $filename = str_replace(['/', '\\', ':'], '-', $document->title) . '.pdf';
+
+        return Storage::disk('local')->download($document->file_path, $filename);
     }
 
     public function destroy(Asset $asset)

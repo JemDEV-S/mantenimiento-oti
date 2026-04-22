@@ -4,10 +4,13 @@ namespace App\Services\Employee;
 
 use App\DTOs\Employee\CreateEmployeeDTO;
 use App\DTOs\Employee\UpdateEmployeeDTO;
+use App\Enums\RoleEnum;
 use App\Exceptions\Employee\EmployeeException;
 use App\Models\Employee;
+use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 class EmployeeService
 {
@@ -36,7 +39,40 @@ class EmployeeService
 
     public function create(CreateEmployeeDTO $dto): Employee
     {
-        return Employee::create($dto->toArray());
+        $employee = Employee::create($dto->toArray());
+
+        if ($dto->is_technician) {
+            $this->createTechnicianUser($employee, $dto->dni);
+        }
+
+        return $employee;
+    }
+
+    private function createTechnicianUser(Employee $employee, string $dni): User
+    {
+        $firstName   = Str::ascii(strtolower(explode(' ', trim($employee->name))[0]));
+        $firstSurname = Str::ascii(strtolower(explode(' ', trim($employee->last_name))[0]));
+
+        // Primer letra del nombre + primer apellido (solo letras)
+        $base     = preg_replace('/[^a-z]/', '', substr($firstName, 0, 1) . $firstSurname);
+        $username = $base;
+        $counter  = 1;
+
+        while (User::where('username', $username)->exists()) {
+            $username = $base . $counter++;
+        }
+
+        $user = User::create([
+            'employee_id' => $employee->id,
+            'username'    => $username,
+            'email'       => $employee->email,
+            'password'    => $dni,
+            'is_active'   => true,
+        ]);
+
+        $user->assignRole(RoleEnum::TECNICO->value);
+
+        return $user;
     }
 
     public function update(Employee $employee, UpdateEmployeeDTO $dto): Employee

@@ -34,6 +34,7 @@
                         :value="old('asset_type')"
                         :options="collect($types)->mapWithKeys(fn($t) => [$t->value => $t->label()])->toArray()"
                         placeholder="Seleccionar tipo..."
+                        x-on:change="$dispatch('asset-type-change', { type: $event.target.value })"
                     />
                     <x-ui.input name="serial_number" label="Número de serie" :value="old('serial_number')" placeholder="Ej: SN123456789" />
                     <x-ui.input name="brand" label="Marca" :value="old('brand')" placeholder="Ej: HP, Dell, Lenovo..." />
@@ -65,6 +66,9 @@
                 </div>
             </x-ui.card>
 
+            {{-- Especificaciones técnicas (aparece según el tipo de activo) --}}
+            <x-ui.specs-builder name="specs_json" :asset-type="old('asset_type', '')" />
+
             {{-- Asignación --}}
             <x-ui.card>
                 <x-slot:header>
@@ -72,19 +76,21 @@
                 </x-slot:header>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <x-ui.select
+                    <x-ui.searchable-select
                         name="organizational_unit_id"
                         label="Unidad organizacional"
                         :value="old('organizational_unit_id')"
                         :options="$units->pluck('name', 'id')->toArray()"
                         placeholder="Sin asignar"
+                        searchPlaceholder="Buscar unidad..."
                     />
-                    <x-ui.select
+                    <x-ui.searchable-select
                         name="responsible_employee_id"
                         label="Empleado responsable"
                         :value="old('responsible_employee_id')"
                         :options="$employees->pluck('full_name', 'id')->toArray()"
                         placeholder="Sin responsable"
+                        searchPlaceholder="Buscar empleado..."
                     />
                 </div>
             </x-ui.card>
