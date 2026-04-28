@@ -227,13 +227,34 @@
 
                 @can('maintenance-case.edit')
                 @if (!$isClosed)
+
+                {{-- Aplicar ítems desde plantilla --}}
+                @if ($templates->isNotEmpty())
+                <div class="border-t border-slate-100 pt-4 mb-4">
+                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Cargar ítems desde plantilla</p>
+                    <form method="POST" action="{{ route('maintenance-cases.apply-template', $maintenanceCase) }}"
+                          class="flex items-center gap-2"
+                          onsubmit="return confirm('¿Agregar todos los ítems de la plantilla seleccionada?')">
+                        @csrf
+                        <select name="template_id" required
+                                class="block flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-sigat-500 focus:ring-2 focus:ring-sigat-500/20 focus:outline-none">
+                            <option value="">Seleccionar plantilla…</option>
+                            @foreach ($templates as $tpl)
+                                <option value="{{ $tpl->id }}">{{ $tpl->name }} ({{ $tpl->items->count() }} ítems)</option>
+                            @endforeach
+                        </select>
+                        <x-ui.button type="submit" size="sm" variant="secondary">Aplicar</x-ui.button>
+                    </form>
+                </div>
+                @endif
+
                 <form method="POST" action="{{ route('maintenance-cases.items.add', $maintenanceCase) }}"
                       class="border-t border-slate-100 pt-4">
                     @csrf
-                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">Agregar ítem</p>
+                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">Agregar ítem manual</p>
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <div class="col-span-2 sm:col-span-1">
-                            <select name="type" class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-sigat-500 focus:ring-2 focus:ring-sigat-500/20 focus:outline-none">
+                            <select name="item_type" class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-sigat-500 focus:ring-2 focus:ring-sigat-500/20 focus:outline-none">
                                 @foreach (\App\Enums\MaintenanceItemType::cases() as $t)
                                     <option value="{{ $t->value }}">{{ $t->label() }}</option>
                                 @endforeach

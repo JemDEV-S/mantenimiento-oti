@@ -120,7 +120,7 @@ class TechnicianService
         if (! empty($data['status'])) {
             $update['status'] = $data['status'];
         }
-        foreach (['diagnosis', 'actions_taken', 'notes'] as $field) {
+        foreach (['maintenance_type', 'priority', 'problem_description', 'diagnosis', 'actions_taken', 'notes'] as $field) {
             if (array_key_exists($field, $data)) {
                 $update[$field] = $data[$field];
             }
@@ -170,7 +170,7 @@ class TechnicianService
 
             if ($data['final_status'] === 'completado') {
                 $this->closeCaseAction->execute($case, [
-                    'actions_taken' => $data['diagnosis'] ?? $data['problem_description'],
+                    'actions_taken' => $data['actions_taken'] ?? $data['diagnosis'] ?? $data['problem_description'],
                 ]);
             }
 

@@ -53,6 +53,7 @@ class RolePermissionSeeder extends Seeder
             PermissionEnum::CAMPAIGN_VIEW->value,
             PermissionEnum::DOCUMENT_VIEW->value,
             PermissionEnum::AGENT_VIEW->value,
+            PermissionEnum::MAINTENANCE_TEMPLATE_VIEW->value,
         ]);
 
         $empleado->syncPermissions([

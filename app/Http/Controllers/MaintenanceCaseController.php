@@ -15,8 +15,11 @@ use App\Http\Requests\MaintenanceItem\StoreMaintenanceItemRequest;
 use App\Models\Asset;
 use App\Models\Employee;
 use App\Models\MaintenanceCase;
+use App\Models\MaintenanceTemplate;
 use App\Services\Document\DocumentGeneratorService;
 use App\Services\MaintenanceCase\MaintenanceCaseService;
+use App\Services\MaintenanceTemplate\MaintenanceTemplateService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class MaintenanceCaseController extends Controller
@@ -24,6 +27,7 @@ class MaintenanceCaseController extends Controller
     public function __construct(
         private readonly MaintenanceCaseService $caseService,
         private readonly DocumentGeneratorService $docGenerator,
+        private readonly MaintenanceTemplateService $templateService,
     ) {}
 
     public function index()
@@ -50,8 +54,9 @@ class MaintenanceCaseController extends Controller
         $employees   = Employee::where('is_active', true)->orderBy('full_name')->get();
         $types       = MaintenanceType::cases();
         $priorities  = MaintenancePriority::cases();
+        $templates   = $this->templateService->getActiveByType(null);
 
-        return view('maintenance-cases.create', compact('assets', 'technicians', 'employees', 'types', 'priorities'));
+        return view('maintenance-cases.create', compact('assets', 'technicians', 'employees', 'types', 'priorities', 'templates'));
     }
 
     public function store(StoreMaintenanceCaseRequest $request)
@@ -76,7 +81,31 @@ class MaintenanceCaseController extends Controller
 
         $maintenanceCase->load('asset', 'campaign', 'reportedBy', 'assignedTechnician', 'items', 'documents');
 
-        return view('maintenance-cases.show', compact('maintenanceCase'));
+        $templates = $this->templateService->getActiveByType($maintenanceCase->maintenance_type->value);
+
+        return view('maintenance-cases.show', compact('maintenanceCase', 'templates'));
+    }
+
+    public function applyTemplate(Request $request, MaintenanceCase $maintenanceCase)
+    {
+        $this->authorize('maintenance-case.edit');
+
+        $request->validate(['template_id' => 'required|integer|exists:maintenance_templates,id']);
+
+        $template = MaintenanceTemplate::with('items')->findOrFail($request->template_id);
+
+        foreach ($template->items as $tItem) {
+            $this->caseService->addItem($maintenanceCase, CreateMaintenanceItemDTO::fromArray([
+                'maintenance_case_id' => $maintenanceCase->id,
+                'item_type'           => $tItem->item_type->value,
+                'name'                => $tItem->name,
+                'description'         => $tItem->description,
+                'quantity'            => $tItem->quantity,
+                'unit_cost'           => $tItem->unit_cost,
+            ]));
+        }
+
+        return back()->with('success', "Ítems de la plantilla \"{$template->name}\" agregados correctamente.");
     }
 
     public function edit(MaintenanceCase $maintenanceCase)
@@ -87,8 +116,9 @@ class MaintenanceCaseController extends Controller
         $types       = MaintenanceType::cases();
         $priorities  = MaintenancePriority::cases();
         $statuses    = MaintenanceCaseStatus::cases();
+        $templates   = $this->templateService->getActiveByType($maintenanceCase->maintenance_type->value);
 
-        return view('maintenance-cases.edit', compact('maintenanceCase', 'technicians', 'types', 'priorities', 'statuses'));
+        return view('maintenance-cases.edit', compact('maintenanceCase', 'technicians', 'types', 'priorities', 'statuses', 'templates'));
     }
 
     public function update(UpdateMaintenanceCaseRequest $request, MaintenanceCase $maintenanceCase)

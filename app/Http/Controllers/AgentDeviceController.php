@@ -163,12 +163,55 @@ class AgentDeviceController extends Controller
         return view('agents.index', compact('devices'));
     }
 
+    public function webStatus(AgentDevice $agentDevice): JsonResponse
+    {
+        $this->authorize('agent.view');
+
+        $agentDevice->refresh();
+
+        $heartbeats = $agentDevice->syncs()
+            ->where('sync_type', AgentSyncType::HEARTBEAT->value)
+            ->where('created_at', '>=', now()->subHours(24))
+            ->orderBy('created_at')
+            ->get(['id', 'created_at', 'payload_json'])
+            ->map(fn ($s) => [
+                'ts'      => $s->created_at->timestamp,
+                'ip'      => data_get($s->payload_json, 'last_ip'),
+                'version' => data_get($s->payload_json, 'agent_version'),
+            ])
+            ->values()
+            ->all();
+
+        return response()->json([
+            'last_heartbeat_at' => $agentDevice->last_heartbeat_at?->timestamp,
+            'status'            => $agentDevice->status->value,
+            'is_online'         => $agentDevice->isOnline(),
+            'last_ip'           => $agentDevice->last_ip,
+            'agent_version'     => $agentDevice->agent_version,
+            'heartbeats'        => $heartbeats,
+            'server_ts'         => now()->timestamp,
+        ]);
+    }
+
     public function webShow(AgentDevice $agentDevice)
     {
         $this->authorize('agent.view');
 
         $agentDevice->load('asset', 'syncs');
 
-        return view('agents.show', compact('agentDevice'));
+        $heartbeats = $agentDevice->syncs()
+            ->where('sync_type', AgentSyncType::HEARTBEAT->value)
+            ->where('created_at', '>=', now()->subHours(24))
+            ->orderBy('created_at')
+            ->get(['id', 'created_at', 'payload_json', 'status'])
+            ->map(fn ($s) => [
+                'ts'      => $s->created_at->timestamp,
+                'ip'      => data_get($s->payload_json, 'last_ip'),
+                'version' => data_get($s->payload_json, 'agent_version'),
+            ])
+            ->values()
+            ->all();
+
+        return view('agents.show', compact('agentDevice', 'heartbeats'));
     }
 }

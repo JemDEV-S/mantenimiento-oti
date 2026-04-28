@@ -18,11 +18,13 @@ return [
     'sidebar_submenus' => [
         'assets' => [
             ['label' => 'Inventario', 'route' => 'assets.index', 'description' => 'Gestionar activos tecnologicos'],
+            ['label' => 'Monitor de PCs', 'route' => 'assets.pc-monitor', 'description' => 'Estado y software de equipos PC'],
             ['label' => 'Movimientos', 'route' => 'asset-movements.index', 'description' => 'Asignaciones y transferencias'],
         ],
         'maintenance' => [
             ['label' => 'Casos', 'route' => 'maintenance-cases.index', 'description' => 'Casos de mantenimiento'],
             ['label' => 'Campanas', 'route' => 'campaigns.index', 'description' => 'Campanas preventivas'],
+            ['label' => 'Plantillas', 'route' => 'maintenance-templates.index', 'description' => 'Plantillas de mantenimiento'],
         ],
         'organization' => [
             ['label' => 'Unidades', 'route' => 'organizational-units.index', 'description' => 'Estructura organizacional'],

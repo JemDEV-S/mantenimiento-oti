@@ -116,6 +116,26 @@ class AssetController extends Controller
         return Storage::disk('local')->download($document->file_path, $filename);
     }
 
+    public function pcMonitor()
+    {
+        $this->authorize('asset.view');
+
+        $assets = Asset::whereIn('asset_type', [
+                AssetType::COMPUTADORA->value,
+                AssetType::LAPTOP->value,
+            ])
+            ->with(['agentDevice', 'organizationalUnit', 'responsible'])
+            ->search(request('search'))
+            ->byUnit(request()->integer('unit_id') ?: null)
+            ->orderBy('name')
+            ->paginate(12)
+            ->withQueryString();
+
+        $units = OrganizationalUnit::where('is_active', true)->orderBy('name')->get();
+
+        return view('assets.pc-monitor', compact('assets', 'units'));
+    }
+
     public function destroy(Asset $asset)
     {
         $this->authorize('asset.delete');

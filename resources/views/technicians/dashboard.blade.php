@@ -100,7 +100,7 @@
                 @endphp
                 <tr class="hover:bg-slate-50/50 transition-colors">
                     <x-ui.td>
-                        <a href="{{ route('tecnico.cases.show', $case) }}"
+                        <a href="{{ route('tecnico.cases.workflow', $case) }}"
                            class="font-mono text-xs font-semibold text-sigat-600 bg-sigat-50 px-2 py-0.5 rounded-md hover:bg-sigat-100 transition-colors">
                             {{ $case->code }}
                         </a>

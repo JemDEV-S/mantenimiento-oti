@@ -57,4 +57,10 @@ enum PermissionEnum: string
     // Agentes / dispositivos
     case AGENT_VIEW   = 'agent.view';
     case AGENT_MANAGE = 'agent.manage';
+
+    // Plantillas de mantenimiento
+    case MAINTENANCE_TEMPLATE_VIEW   = 'maintenance-template.view';
+    case MAINTENANCE_TEMPLATE_CREATE = 'maintenance-template.create';
+    case MAINTENANCE_TEMPLATE_EDIT   = 'maintenance-template.edit';
+    case MAINTENANCE_TEMPLATE_DELETE = 'maintenance-template.delete';
 }

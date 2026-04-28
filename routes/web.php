@@ -9,6 +9,7 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\MaintenanceCampaignController;
 use App\Http\Controllers\MaintenanceCaseController;
+use App\Http\Controllers\MaintenanceTemplateController;
 use App\Http\Controllers\OrganizationalUnitController;
 use App\Http\Controllers\Permission\PermissionController;
 use App\Http\Controllers\Role\RoleController;
@@ -56,6 +57,7 @@ Route::middleware(['auth', 'user.active'])->group(function () {
 
     // ── Activos ───────────────────────────────────────────────────────────────
     Route::middleware('permission:asset.view')->group(function () {
+        Route::get('assets/pc-monitor', [AssetController::class, 'pcMonitor'])->name('assets.pc-monitor');
         Route::resource('assets', AssetController::class);
         Route::get('assets/{asset}/generate-ficha',     [AssetController::class, 'generateFicha'])->name('assets.generate-ficha');
         Route::get('assets/{asset}/generate-historial', [AssetController::class, 'generateHistorial'])->name('assets.generate-historial');
@@ -83,6 +85,14 @@ Route::middleware(['auth', 'user.active'])->group(function () {
         Route::post('maintenance-cases/{maintenanceCase}/items', [MaintenanceCaseController::class, 'addItem'])->name('maintenance-cases.items.add');
         Route::delete('maintenance-cases/{maintenanceCase}/items/{item}', [MaintenanceCaseController::class, 'removeItem'])->name('maintenance-cases.items.remove');
         Route::get('maintenance-cases/{maintenanceCase}/generate-informe', [MaintenanceCaseController::class, 'generateInforme'])->name('maintenance-cases.generate-informe');
+        Route::post('maintenance-cases/{maintenanceCase}/apply-template', [MaintenanceCaseController::class, 'applyTemplate'])->name('maintenance-cases.apply-template');
+    });
+
+    // ── Plantillas de mantenimiento ───────────────────────────────────────────
+    Route::middleware('permission:maintenance-template.view')->group(function () {
+        Route::resource('maintenance-templates', MaintenanceTemplateController::class)->except('show');
+        Route::get('maintenance-templates/{maintenanceTemplate}/data', [MaintenanceTemplateController::class, 'data'])->name('maintenance-templates.data');
+        Route::get('maintenance-templates-list', [MaintenanceTemplateController::class, 'listForType'])->name('maintenance-templates.list');
     });
 
     // ── Documentos ────────────────────────────────────────────────────────────
@@ -96,6 +106,7 @@ Route::middleware(['auth', 'user.active'])->group(function () {
     // ── Agentes (vista admin) ─────────────────────────────────────────────────
     Route::middleware('permission:agent.view')->group(function () {
         Route::get('agents', [AgentDeviceController::class, 'webIndex'])->name('agents.index');
+        Route::get('agents/{agentDevice}/status', [AgentDeviceController::class, 'webStatus'])->name('agents.status');
         Route::get('agents/{agentDevice}', [AgentDeviceController::class, 'webShow'])->name('agents.show');
     });
 
@@ -113,8 +124,13 @@ Route::middleware(['auth', 'user.active'])->group(function () {
         Route::post('/atender', [TechnicianController::class, 'storeAttention'])->name('attend-asset.store');
 
         Route::prefix('casos')->name('cases.')->group(function () {
+            Route::get('/{maintenanceCase}/flujo', [TechnicianController::class, 'caseWorkflow'])->name('workflow');
             Route::get('/{maintenanceCase}',          [TechnicianController::class, 'caseDetail'])->name('show');
             Route::patch('/{maintenanceCase}/progreso', [TechnicianController::class, 'updateProgress'])->name('progress');
+            Route::post('/{maintenanceCase}/items', [TechnicianController::class, 'addItem'])->name('items.add');
+            Route::delete('/{maintenanceCase}/items/{item}', [TechnicianController::class, 'removeItem'])->name('items.remove');
+            Route::post('/{maintenanceCase}/apply-template', [TechnicianController::class, 'applyTemplate'])->name('apply-template');
+            Route::patch('/{maintenanceCase}/close', [TechnicianController::class, 'closeCase'])->name('close');
         });
     });
 });

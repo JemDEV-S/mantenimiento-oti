@@ -5,6 +5,12 @@
         description="Gestión centralizada de todos los equipos e infraestructura TI."
     >
         <x-slot:actions>
+            @can('asset.view')
+            <x-ui.button variant="secondary" size="sm" href="{{ route('assets.pc-monitor') }}">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                Monitor de PCs
+            </x-ui.button>
+            @endcan
             @can('asset.create')
             <x-ui.button href="{{ route('assets.create') }}" size="sm">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.5v15m7.5-7.5h-15"/></svg>
@@ -64,6 +70,7 @@
             <x-ui.th>Condición</x-ui.th>
             <x-ui.th>Unidad</x-ui.th>
             <x-ui.th>Responsable</x-ui.th>
+            <x-ui.th>Agente</x-ui.th>
             <x-ui.th></x-ui.th>
         </x-slot:head>
 
@@ -86,6 +93,8 @@
                 default    => 'neutral',
             };
             $ipAddresses = collect(data_get($asset->specs_json, 'ip_addresses', []))->filter()->values();
+            $agent       = $asset->agentDevice;
+            $isOnline    = $agent?->isOnline() ?? false;
         @endphp
         <tr class="hover:bg-slate-50/50 transition-colors">
             <x-ui.td>
@@ -128,6 +137,31 @@
                 @endif
             </x-ui.td>
             <x-ui.td>
+                @if ($agent)
+                    <div class="flex items-center gap-2">
+                        <span class="relative flex h-2.5 w-2.5">
+                            @if ($isOnline)
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                            @else
+                            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-slate-300"></span>
+                            @endif
+                        </span>
+                        @can('agent.view')
+                        <a href="{{ route('agents.show', $agent) }}" class="text-xs text-slate-500 hover:text-sigat-600 transition-colors">
+                            {{ $isOnline ? 'En línea' : 'Offline' }}
+                        </a>
+                        @else
+                        <span class="text-xs {{ $isOnline ? 'text-emerald-600' : 'text-slate-400' }}">
+                            {{ $isOnline ? 'En línea' : 'Offline' }}
+                        </span>
+                        @endcan
+                    </div>
+                @else
+                    <span class="text-xs text-slate-300">—</span>
+                @endif
+            </x-ui.td>
+            <x-ui.td>
                 <div class="flex items-center gap-1 justify-end">
                     <x-ui.button variant="ghost" size="xs" href="{{ route('assets.show', $asset) }}">Ver</x-ui.button>
                     @can('asset.edit')
@@ -145,7 +179,7 @@
         </tr>
         @empty
         <tr>
-            <td colspan="8" class="py-16">
+            <td colspan="9" class="py-16">
                 <x-ui.empty-state title="No hay activos registrados" description="Registra el primer activo tecnológico." />
             </td>
         </tr>

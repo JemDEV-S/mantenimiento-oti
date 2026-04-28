@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             DocumentSeeder::class,
             SettingSeeder::class,
             AgentSeeder::class,
+            MaintenanceTemplateSeeder::class,
         ]);
     }
 }

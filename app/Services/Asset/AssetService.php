@@ -19,7 +19,7 @@ class AssetService
 
     public function getPaginated(array $filters = []): LengthAwarePaginator
     {
-        return Asset::with('organizationalUnit', 'responsible')
+        return Asset::with('organizationalUnit', 'responsible', 'agentDevice')
             ->search($filters['search'] ?? null)
             ->byType($filters['type'] ?? null)
             ->byStatus($filters['status'] ?? null)

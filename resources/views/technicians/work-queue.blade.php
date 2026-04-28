@@ -77,7 +77,7 @@
                         default   => 'border-l-slate-200',
                     };
                 @endphp
-                <a href="{{ route('tecnico.cases.show', $case) }}"
+                <a href="{{ $case->status->value === 'completado' ? route('tecnico.cases.show', $case) : route('tecnico.cases.workflow', $case) }}"
                    class="block bg-white rounded-xl border border-slate-200 border-l-4 {{ $priorityBorder }} p-3.5 hover:shadow-md hover:border-slate-300 transition-all duration-150 group">
                     <div class="flex items-start justify-between gap-2 mb-2">
                         <span class="font-mono text-xs font-semibold text-sigat-600 bg-sigat-50 px-1.5 py-0.5 rounded">
@@ -96,6 +96,9 @@
                         @if ($case->asset?->internal_code)
                         <span class="text-xs font-mono text-slate-400">{{ $case->asset->internal_code }}</span>
                         @endif
+                    </div>
+                    <div class="mt-3 text-xs font-semibold text-sigat-600">
+                        {{ $case->status->value === 'completado' ? 'Ver detalle del caso' : 'Continuar mantenimiento' }}
                     </div>
                 </a>
                 @empty
