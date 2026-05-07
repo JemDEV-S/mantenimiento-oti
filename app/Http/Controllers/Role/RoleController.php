@@ -39,7 +39,7 @@ class RoleController extends Controller
         );
 
         return redirect()
-            ->route('roles.index')
+            ->route('admin.roles.index')
             ->with('success', 'Rol creado exitosamente.');
     }
 
@@ -59,7 +59,7 @@ class RoleController extends Controller
         );
 
         return redirect()
-            ->route('roles.index')
+            ->route('admin.roles.index')
             ->with('success', 'Rol actualizado exitosamente.');
     }
 
@@ -68,7 +68,7 @@ class RoleController extends Controller
         $this->roleService->delete($id);
 
         return redirect()
-            ->route('roles.index')
+            ->route('admin.roles.index')
             ->with('success', 'Rol eliminado exitosamente.');
     }
 }
