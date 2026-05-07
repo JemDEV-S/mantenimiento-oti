@@ -1,8 +1,12 @@
 <x-layouts.app title="Editar Usuario" moduleLabel="Usuarios" pageTitle="Editar Usuario">
 
+    @php
+        $displayName = $user->employee?->full_name ?? $user->username;
+    @endphp
+
     <x-ui.page-header
         title="Editar usuario"
-        :description="'Modificando cuenta de: ' . $user->name"
+        :description="'Modificando cuenta de: ' . $displayName"
     >
         <x-slot:actions>
             <x-ui.button variant="secondary" size="sm" href="{{ route('users.index') }}">
@@ -11,6 +15,14 @@
             </x-ui.button>
         </x-slot:actions>
     </x-ui.page-header>
+
+    @php
+        $employeeOptions = $employees
+            ->mapWithKeys(fn ($e) => [
+                $e->id => $e->full_name . ' — DNI ' . $e->dni,
+            ])
+            ->toArray();
+    @endphp
 
     <form method="POST" action="{{ route('users.update', $user) }}" class="max-w-2xl">
         @csrf @method('PUT')
@@ -27,18 +39,37 @@
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div class="sm:col-span-2">
-                    <x-ui.input name="name" label="Nombre completo" :value="old('name', $user->name)" />
+                    <x-ui.searchable-select
+                        name="employee_id"
+                        label="Empleado asociado"
+                        :value="old('employee_id', $user->employee_id)"
+                        :options="$employeeOptions"
+                        placeholder="Sin empleado asociado"
+                        searchPlaceholder="Buscar por nombre o DNI..."
+                        hint="Solo se listan empleados activos sin cuenta de usuario."
+                    />
                 </div>
+
                 <x-ui.input name="username" label="Nombre de usuario" :value="old('username', $user->username)" />
                 <x-ui.input name="email" type="email" label="Correo electrónico" :value="old('email', $user->email)" />
                 <x-ui.input name="password" type="password" label="Nueva contraseña" placeholder="Dejar en blanco para no cambiar" />
                 <x-ui.input name="password_confirmation" type="password" label="Confirmar nueva contraseña" placeholder="Dejar en blanco para no cambiar" />
+
                 <div class="sm:col-span-2">
                     <x-ui.select
                         name="role"
                         label="Rol"
                         :value="old('role', $currentRole)"
                         :options="$roles->pluck('name', 'name')->toArray()"
+                    />
+                </div>
+
+                <div class="sm:col-span-2 pt-2 border-t border-slate-100">
+                    <x-ui.toggle
+                        name="is_active"
+                        label="Cuenta activa"
+                        :checked="old('is_active', $user->is_active)"
+                        hint="Si se desactiva, el usuario no podrá iniciar sesión."
                     />
                 </div>
             </div>

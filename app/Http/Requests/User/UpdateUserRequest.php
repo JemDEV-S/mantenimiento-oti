@@ -12,6 +12,7 @@ class UpdateUserRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'employee_id' => ['nullable', 'exists:employees,id'],
             'username'  => ['required', 'string', 'max:100', 'unique:users,username,' . $this->route('user')->id],
             'email'     => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $this->route('user')->id],
             'password'  => ['nullable', 'string', 'min:8', 'confirmed'],
@@ -23,6 +24,7 @@ class UpdateUserRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'employee_id.exists' => 'El empleado no existe.',
             'username.required'  => 'El nombre de usuario es requerido.',
             'username.unique'    => 'Ya existe un usuario con ese nombre de usuario.',
             'email.required'     => 'El correo electrónico es requerido.',

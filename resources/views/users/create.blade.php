@@ -2,7 +2,7 @@
 
     <x-ui.page-header
         title="Nuevo usuario"
-        description="Crea una cuenta de acceso para el sistema."
+        description="Crea una cuenta de acceso para el sistema, asociada a un empleado registrado."
     >
         <x-slot:actions>
             <x-ui.button variant="secondary" size="sm" href="{{ route('users.index') }}">
@@ -11,6 +11,14 @@
             </x-ui.button>
         </x-slot:actions>
     </x-ui.page-header>
+
+    @php
+        $employeeOptions = $employees
+            ->mapWithKeys(fn ($e) => [
+                $e->id => $e->full_name . ' — DNI ' . $e->dni,
+            ])
+            ->toArray();
+    @endphp
 
     <form method="POST" action="{{ route('users.store') }}" class="max-w-2xl">
         @csrf
@@ -22,12 +30,22 @@
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div class="sm:col-span-2">
-                    <x-ui.input name="name" label="Nombre completo" :value="old('name')" placeholder="Ej: Juan Pérez García" />
+                    <x-ui.searchable-select
+                        name="employee_id"
+                        label="Empleado asociado"
+                        :value="old('employee_id')"
+                        :options="$employeeOptions"
+                        placeholder="Sin empleado asociado"
+                        searchPlaceholder="Buscar por nombre o DNI..."
+                        hint="Solo se listan empleados activos sin cuenta de usuario."
+                    />
                 </div>
+
                 <x-ui.input name="username" label="Nombre de usuario" :value="old('username')" placeholder="Ej: jperez" />
                 <x-ui.input name="email" type="email" label="Correo electrónico" :value="old('email')" placeholder="correo@mdsj.gob.pe" />
                 <x-ui.input name="password" type="password" label="Contraseña" placeholder="Mínimo 8 caracteres" />
                 <x-ui.input name="password_confirmation" type="password" label="Confirmar contraseña" placeholder="Repite la contraseña" />
+
                 <div class="sm:col-span-2">
                     <x-ui.select
                         name="role"
@@ -35,6 +53,15 @@
                         :value="old('role')"
                         :options="$roles->pluck('name', 'name')->toArray()"
                         placeholder="Seleccionar rol..."
+                    />
+                </div>
+
+                <div class="sm:col-span-2 pt-2 border-t border-slate-100">
+                    <x-ui.toggle
+                        name="is_active"
+                        label="Cuenta activa"
+                        :checked="old('is_active', true)"
+                        hint="Si se desactiva, el usuario no podrá iniciar sesión."
                     />
                 </div>
             </div>

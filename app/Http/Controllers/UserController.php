@@ -6,6 +6,7 @@ use App\DTOs\User\CreateUserDTO;
 use App\DTOs\User\UpdateUserDTO;
 use App\Http\Requests\User\StoreUserRequest;
 use App\Http\Requests\User\UpdateUserRequest;
+use App\Models\Employee;
 use App\Models\User;
 use App\Services\Role\RoleService;
 use App\Services\User\UserService;
@@ -36,7 +37,12 @@ class UserController extends Controller
 
         $roles = $this->roleService->getAll();
 
-        return view('users.create', compact('roles'));
+        $employees = Employee::active()
+            ->whereDoesntHave('user')
+            ->orderBy('full_name')
+            ->get(['id', 'full_name', 'dni', 'email']);
+
+        return view('users.create', compact('roles', 'employees'));
     }
 
     public function store(StoreUserRequest $request)
@@ -57,7 +63,12 @@ class UserController extends Controller
 
         $currentRole = $user->roles()->first()?->name;
 
-        return view('users.edit', compact('user', 'roles', 'currentRole'));
+        $employees = Employee::active()
+            ->where(fn ($q) => $q->whereDoesntHave('user')->orWhere('id', $user->employee_id))
+            ->orderBy('full_name')
+            ->get(['id', 'full_name', 'dni', 'email']);
+
+        return view('users.edit', compact('user', 'roles', 'currentRole', 'employees'));
     }
 
     public function update(UpdateUserRequest $request, User $user)
